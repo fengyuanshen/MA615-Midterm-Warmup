@@ -1,0 +1,1030 @@
+---
+title: "Stawberries: exploratory data analysis"
+author: MA615
+date: 2023 Oct 11
+format: html
+engine: knitr
+---
+
+# Assignment 
+
+Using our class discussions and this document as a starting point, produce an EDA report.  The report should describe
+the data itself so that readers understand the data sources used in the report and how you cleaned and organized the data for analysis.
+
+The sections below suggest how the report might be organized.  The report should be succinct, communicating the information that you believe will be helpful to someone doing a fuller analysis of the data or using the data for model building.  Implementation details should be included in commentary that is included in code.
+
+Sections of the document as it was originally presented in class have been commented so that you can see them in the code.
+
+<hr>
+<hr>
+
+## Data acquisition and assessment  
+
+  - Data sources   
+  - Assumptions and motivations  
+
+## Data cleaning and organization   
+
+Outline the approach taked to clean and organize the data.
+
+
+
+
+## References
+
+### Material about strawberries  
+
+
+[WHO says strawberries may not be so safe for you--2017March16](https://med.news.am/eng/news/13621/who-says-strawberries-may-not-be-so-safe-for-you.html)
+
+[Pesticides + poison gases = cheap, year-round strawberries 2019March20](https://www.ewg.org/foodnews/strawberries.php)
+
+[Multistate Outbreak of Hepatitis A Virus Infections Linked to Fresh Organic Strawberries-2022March5](https://www.cdc.gov/hepatitis/outbreaks/2022/hav-contaminated-food/index.htm)
+
+[Strawberry makes list of cancer-fighting foods-2023May31](https://issuu.com/mechlocal/docs/053123_mech_asf/s/25386339)
+
+### Technical references
+
+In their handbook ["An introduction to data cleaning with R" by Edwin de Jonge and Mark van der Loo](https://cran.r-project.org/doc/contrib/de_Jonge+van_der_Loo-Introduction_to_data_cleaning_with_R.pdf), de Jonge and van der Loo go into detail about specific data cleaning isssues and how to handle them in R.
+
+["Problems, Methods, and Challenges in Comprehensive Data Cleansing" by Heiko Müller and Johann-Christoph Freytag](https://www.researchgate.net/profile/Heiko-Mueller/publication/228929938_Problems_methods_and_challenges_in_comprehensive_data_cleansing/links/09e415101b58541e2c000000/Problems-methods-and-challenges-in-comprehensive-data-cleansing.pdf) is a good companion to the de Jonge and van der Loo handbook, offering additional insights.
+
+
+## Initial questions
+
+  - Initial questions about strawberries, the data, and about the work you are undertaking.  Write these before you begin working.
+
+
+
+
+## The data
+
+Describe the source and original condition of the data: organization, problems with the data that needed to be addressed and so on.  Cite data sources.
+
+The data set for this assignment has been selected from: [USDA_NASS](https://quickstats.nass.usda.gov) <br> The data have been stored on NASS here: [USDA_NASS_strawb_2023SEP19](https://quickstats.nass.usda.gov/results/45FBC825-B104-38E2-9802-839F5F3C7036)
+
+
+Make relevant observations in the document and in your code about data. Add commentary to the code so that anthoer analysts
+could use or extend your code.
+
+Discusss missing data, inclding how you handled it.  Be careful to point out where NA's are being produced during processing and are not data missing in the original data.
+
+Where it is relevant, include information of how you have organized the data for analysis.  It might, for example, be helpful to know that there is both agricultural census data and survey data. It might be helpful to discuss data that appears to be redundant between these two sources.
+
+Make sure you include details in your discussion and in your code about other data and information you used in your work.  Cite sources and provide detail that would allow another analyst to reproduce your work.
+
+
+
+```{r}
+#| label: Load libraries
+#| warning: false
+#| message: false
+#| echo: false
+
+library(knitr)  
+library(kableExtra)
+library(tidyverse)
+library(stringr)
+```
+
+<!-- Read the file -->
+
+```{r warning=FALSE, message=FALSE}
+#| label: read data - glimpse 
+#| warning: false
+#| message: false
+#| echo: false
+
+strawberry <- read_csv("strawberry.csv", col_names = TRUE)
+
+# glimpse(strawberry)
+```
+
+
+<!-- Remove columns with a single value in all columns -->
+
+```{r}
+#| label: drop one-item columns
+#| echo: false
+
+## define function
+drop_one_value_col <- function(df){
+col_name <- NULL
+col_val <- NULL
+suppressWarnings({
+for(i in 1:dim(df)[2]){
+if((df |> distinct(df[,i]) |> count()) == 1){
+  col_name = c(col_name, colnames(df[i]))
+  col_val = c(col_val, df[1,i])  
+} }
+})
+
+if(is.null(col_name)){return("No Columns to drop")}else{
+   col_val = unlist(col_val)
+   attributes(col_val) = NULL
+   drp = data.frame(col_name, col_val)
+   return(drp)
+   }
+}
+
+str <- drop_one_value_col(strawberry)
+
+# str |> kable(caption = "Dropped Single-Value Columns: names and values")
+
+str <- str$col_name
+
+strawberry <- strawberry |> select(!all_of(str))
+
+
+
+## applying the function a second time 
+## tests the function when there aren't any 
+## one-value columns
+#####  drop_one_value_col(strawberry)
+
+```
+
+<!-- Glimpse of strawberry data after dropping single-value columns. -->
+
+```{r}
+#| label: glimpse of strawberry data
+#| echo: false
+
+## glimpse(strawberry)
+
+```
+
+
+
+<!-- ## Examine the data. How is it organized? -->
+
+<!-- ### Is every line associated with a state? -->
+
+```{r}
+#| label: examine rows
+#| echo: false
+
+## is every line associated with a state?
+
+## state_all contains the number of rows containing data 
+## for each of the 47 strawberry-growing states.
+state_all <- strawberry |> group_by(State) |> count()
+
+## test if every row is associated with a state by summing the 
+## counts and testing for equality with the total rows in the 
+## data frame
+
+# if(sum(state_all$n) == dim(strawberry)[1]){print("Every row has value in the State column.")}
+
+```
+
+
+
+
+<!-- ### Which state has the most rows? -->
+
+
+```{r}
+#| label: which state has the most rows
+#| echo: false
+
+state_max <- state_all$State[which(state_all$n ==  max(state_all$n)  )]
+
+```
+
+
+
+<!-- The data is organized by state.   -->
+<!-- The state with the most rows is `r paste(state_max)`. -->
+
+<!-- ## Examine California data -->
+
+```{r}
+#| label: examine California data
+#| echo: false
+
+## filter rows of California data from the CENSUS data
+calif_census <- strawberry |> filter((State=="CALIFORNIA") & (Program=="CENSUS"))
+
+
+## ## filter rows of California data from the SURVEY data
+calif_survey <- strawberry |> filter((State=="CALIFORNIA") & (Program=="SURVEY"))
+
+census_col <- colnames(calif_census)
+
+survey_col <- colnames(calif_survey)
+
+```
+
+
+
+<!-- ### List the composite columns  -->
+
+<!-- Census: `r paste(census_col[c(6, 8)])` -->
+
+<!-- Survey: `r paste(survey_col[c(6,7,8)])` -->
+
+
+<!-- ## Separate CENSUS and SURVEY into two Data Frames -->
+
+<!-- In the strawberry data frame,  -->
+<!-- The CENSUS rows contains marketing, sales, and productiong data.  The SURVEY rows contain rows which may be redundant with the CENSUS rows and chemical application rows. -->
+
+<!-- After splitting CENSUS and SURVEY rows into two data frames,  -->
+<!-- finish organizing the CENSUS data first.  Then, organize the -->
+<!-- SURVEY data frame splitting the marketing, and production data from the chemical application data. -->
+
+
+
+
+```{r}
+#| label: split srawberry into census and survey pieces
+#| echo: false
+
+strwb_census <- strawberry |> filter(Program == "CENSUS")
+
+strwb_survey <- strawberry |> filter(Program == "SURVEY")
+
+## check that all of the rows are accounted for
+
+## nrow(strawberry) == (nrow(strwb_census) + nrow(strwb_survey))
+
+## Move marketing-related rows in strw_b_chem 
+## to strw_b_sales
+
+## clean up the environment
+
+rm(calif_census, calif_survey, state_all)
+
+```
+
+
+<!-- # Complete with the census data frame -->
+
+<!-- ## Separate composite columns and clean the Value column -->
+
+<!-- Composite columns in the strwb_census: Data Item, Domain category -->
+
+<!-- Column separators in CENSUS: ",", "-", ":" -->
+
+<!-- ### Separate `Data Item` into columns by "," -->
+
+
+```{r}
+#| label: split Data Item
+#| echo: false
+
+## This will be done in stages --
+
+####################################################
+## split `Data Item` into "Fruit", "temp1","temp2","temp3"
+## then test the columns created for numer of distinct values
+## split the columns until you have columns of 
+## subjects, properties, values, and metrics (where metrics
+## are the units defined for the values)
+
+## In this case, the subject is State/Strawberries -- 
+## strawberries grown reported by state.
+
+## When using separate_wider_delim() when you don't know the 
+## number of columns the function will return,
+## use the "too_many" and "too_few" parameters to set up 
+## the function.  Generally, setting both parameters
+## to "error" will produce helpful error messages.
+
+  strwb_census <- strwb_census |>
+  separate_wider_delim(  cols = `Data Item`,
+                         delim = ",",
+                         names = c("Fruit",
+                                 "temp1",
+                                 "temp2",
+                                 "temp3"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+
+## Test the columns for the number of distinct values.
+## for example:
+##
+# a <- strwb_census |> distinct(Fruit)
+## The Fruit column only has one value: STRAWBERRIES the 
+## subject under investigation.
+##
+## Remember - the value in single-value columns
+## are often needed for Labels on tables and plots.
+##
+## Testing the temp1 column guides the next step.
+# a <- strwb_census |> distinct(temp1)
+## The "temp1" column has 4 distinct values
+##
+##    " ORGANIC - OPERATIONS WITH SALES"
+##    " ORGANIC - PRODUCTION"           
+##    " ORGANIC - SALES"                
+##    " ORGANIC"  
+##
+##  (Note the leading space in each string -- 
+##       which is fixed below.)
+##
+##  You can see that this column needs to be split between
+##  "organic" and the properties "OPERATIONS WITH SALES", 
+##  "PRODUCTION" and "SALES",  
+##    using " - " as the column delimiter.
+##
+##  The column "prop_acct" contains the properties,
+##   which are are accounting metrics related to
+##   strawberry growing operations.
+
+
+############################################
+## split temp1 into crop_type, Prop_acct
+
+strwb_census <- strwb_census |>
+  separate_wider_delim(  cols = temp1,
+                         delim = " - ",
+                         names = c("crop_type",
+                                 "prop_acct"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+
+## Once again, test the columns to plan your next step.
+##
+# a <- strwb_census |> distinct(crop_type)
+## Column "crop_type' has single value  "organic"
+
+# a <- strwb_census |> distinct(prop_acct)
+
+## 
+## The stringss in the "prop_acct" column are row labels
+## for values reported in the "Values" column.  
+
+##    "OPERATIONS WITH SALES"
+##    "PRODUCTION"           
+##    "SALES"               
+##    "NA"   
+
+## Note that the NA is in a row where the value 
+## is labeled in another column.
+##
+
+############################################
+## trim the strings
+## you can see which columns contain string values that need
+## to have leading or trailing spaces that need to be trimmed.
+
+
+# glimpse(strwb_census)
+
+strwb_census$crop_type <- str_trim(strwb_census$crop_type, side = "both")
+
+strwb_census$temp2 <- str_trim(strwb_census$temp2, side = "both")
+
+strwb_census$temp3 <- str_trim(strwb_census$temp3, side = "both")
+
+
+
+#############################################
+## split temp2 into market_type, measure
+
+##
+## The temp2 column requires a different logic.
+## 
+
+## start by looking at the unique entries in the temp2 column.
+
+# a <- strwb_census |> distinct(temp2)
+# 
+# temp2
+# 1  NA                                    
+# 2 " MEASURED IN CWT"                     
+# 3 " MEASURED IN $"                       
+# 4 " FRESH MARKET - OPERATIONS WITH SALES"
+# 5 " FRESH MARKET - SALES"                
+# 6 " PROCESSING - OPERATIONS WITH SALES"  
+# 7 " PROCESSING - SALES"   
+
+## temp2 contains data for three separate columns
+## 
+##   All Strawberries  (is this a Total?)
+##   Fresh Market
+##   Processing
+##
+##  To understand these labels see 
+##     "Strawberries: An Economic Assessment of the Feasibility
+##      of Providing Multiple-Peril Crop Insurance",
+##        prepared by Economic Research Service, USDA
+##             for the Federal Crop Insurance Corporation
+##                  October 31, 1994
+## 
+
+```
+
+
+
+<!-- ## Create a "Fresh Market" column -->
+
+```{r}
+#| label: create a fresh market column
+#| echo: false
+#| eval: true
+
+## make a copy of the temp2 column named `Fresh Market`.
+strwb_census <- strwb_census |> mutate(`Fresh Market` = temp2, .after = temp2)
+
+## Remove cells in `Fresh Market` column 
+##   that begin "MEASURED"
+strwb_census$`Fresh Market` <- strwb_census$`Fresh Market` |> str_replace( "^MEA.*", "")
+
+## Remove cells in `Fresh Market` column 
+##   that begin "PROCESSING" 
+strwb_census$`Fresh Market` <- strwb_census$`Fresh Market` |> str_replace( "^P.*", "")
+
+## substitute a space for NA in `Fresh Market` column
+strwb_census$`Fresh Market`[is.na(strwb_census$`Fresh Market`)] <- ""  
+
+## in temp2 column, remove cells that begin "FRESH"
+ strwb_census$temp2 <- strwb_census$temp2 |> str_replace("^F.*", "")
+
+## Now fix the entries in the `Fresh Market` column
+##   Remove "FRESH MARKET - " from the cells
+strwb_census$`Fresh Market` <- strwb_census$`Fresh Market` |> str_replace("^FRESH MARKET - ", "")
+
+
+```
+
+
+
+<!-- ## Create a "Process Market" column -->
+
+```{r}
+#| label: make process market column
+#| echo: false
+
+## Make a copy of temp2 named `Process Market`
+strwb_census <- strwb_census |> mutate(`Process Market` = temp2, .after = temp2)
+
+## remove `Process Market` cells beginning "MEASURED"
+strwb_census$`Process Market` <-  strwb_census$`Process Market` |> str_replace("^MEA.*", "")
+
+## substitute space for NA in `Process Market` column
+strwb_census$`Process Market`[is.na(strwb_census$`Process Market`)] <- ""
+
+## In temp2, remove cells that begin "PROCESSING"
+strwb_census$temp2 <- strwb_census$temp2 |> str_replace("^P.*", "")
+
+## In `Processing Market`, remove "PROCESSING - " from cells
+strwb_census$`Process Market` <-  strwb_census$`Process Market` |> str_replace("PROCESSING - ", "") 
+
+
+```
+
+
+
+
+
+<!-- Remove NA's from prop_acct, temp2, and temp3 -->
+
+```{r}
+#| label: remove NAs
+#| echo: false
+
+## substitute a space for NA in prop_acct column
+strwb_census$prop_acct[is.na(strwb_census$prop_acct)] <- "" 
+
+## substitute a space for NA in temp2 column
+strwb_census$temp2[is.na(strwb_census$temp2)] <- "" 
+
+## substitute a space for NA in temp2 column
+strwb_census$temp3[is.na(strwb_census$temp3)] <- "" 
+
+
+```
+
+<!-- Combine temp2 with temp3 to create Metric column -->
+<!-- remove  -->
+<!-- relocate columns -->
+
+```{r}
+#| label: final cleanup
+#| echo: false
+
+
+strwb_census <- strwb_census |> unite(temp2, temp3, col="Metric", sep="")
+
+## Now fix the entries in the Metric column
+##   Remove "MEASURED IN " from the cells
+strwb_census$Metric <- strwb_census$Metric |> str_replace("MEASURED IN ", "")
+
+## move Metric to the end
+strwb_census <- strwb_census |> relocate(Metric, .before = Domain)
+
+strwb_census <- strwb_census |> relocate(`Process Market`, .before = Metric)
+
+strwb_census <- strwb_census |> rename(Totals = prop_acct)
+
+#drop_one_value_col(strwb_census)
+
+
+```
+
+
+
+
+
+<!-- ## The Value column transformation -->
+
+```{r}
+#| label: define functions dcomma and footnote finder
+#| echo: false
+#| warning: false
+#| message: false
+#| eval: true
+
+## remove commas from numbers
+## fix footnotes
+
+## basic tools
+
+## start by getting the Values column so you can work on it 
+
+vals <- strwb_census$Value
+
+## note where vals goes in the environment.
+
+## tools -- 2 choices  base R, and stringr package
+
+## BaseR -- Piping??
+
+
+g1 <- sub(",", "", vals)
+# vals[1:20]
+# g1[1:20]
+
+
+g2 <- gsub(",", "", vals)
+# vals[1:20]
+# g2[1:20]
+
+
+## stringr - str_replace(), str_replace_all()
+
+## LOOK -- see ref for stingr pkg
+a <- vals |> str_detect(",")
+
+# vals[1:20]
+# a[1:20]
+
+## Still strings!!
+
+b <- vals |> str_replace(",", "")
+# vals[1:20]
+# b[1:20]
+
+c <- vals |> str_replace_all(",", "")
+# vals[1:20]
+# c[1:20]
+
+## Now notice what happens when the
+## the strings of digits are cast to numerics.
+
+## for example
+c <- as.numeric(c)
+# c[1:20]
+
+
+### remove commas from Value entries
+dcomma <- function(c){
+  x_new <- as.numeric(gsub(",", "", c))
+  return(x_new)
+}
+
+
+
+#########################################  footnotes
+
+## finds single uppor case Character in parens in s2
+## e.g. "(D)"
+
+## To fine the location and value of the footnotes
+
+v <- strwb_census$Value
+
+
+## find the footnote locations
+## fn_i: locations 
+fn_i <- v |> str_detect("^\\([:upper:]\\)$") ## returns
+
+
+## dcomma returns numbers and NA's
+v1 <- dcomma(v)
+
+## locations of NA's
+na_i <- is.na(v1)
+
+## Demonstration that the locations of the footnotes
+## are the same as the locations of the NA's
+
+# length(v) == sum(na_i == fn_i)
+
+## update dcomma()
+## Integrate transformation of the values column and 
+## reporting the footnote values.
+
+
+dcomma <- function(c){
+  suppressWarnings({
+  xnew = as.numeric(gsub(",", "", c))
+  fns = unique(c[is.na(xnew)])
+  vtran = list("new_vec" = xnew, "footnotes" = fns)
+  return(vtran)
+  })
+}
+
+ 
+v_trns <- dcomma(v)
+ 
+
+ a <- v_trns$new_vec
+ # a[1:20]
+ 
+ # v_trns$footnotes
+ 
+
+```
+
+
+
+<!-- NOTE -->
+<!-- These plots were in early versions of the classroom notes. -->
+<!-- In final versions of this document, they should be included in the EDA section. Note that the code will not run without editing. -->
+
+
+<!-- ## plots   -->
+
+```{r}
+#| label: plot 1
+#| echo: false
+#| eval: false
+
+plot1_data <- strawberry |> 
+  select(c(Year, State, Category, Value)) |> 
+  filter((Year == 2021) & (Category == "ORGANIC - OPERATIONS WITH SALES"))
+
+plot1_data$Value <- as.numeric(plot1_data$Value)
+
+plot1_data <- plot1_data |> arrange(desc(Value))
+
+ggplot(plot1_data, aes(x=reorder(State, -Value), y=Value)) + 
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(x = "States", y = "Count",
+title ="Number of Organic Strawberry operations with Sales in 2021")
+
+
+```
+
+```{r}
+#| label: plot 2
+#| echo: false
+#| eval: false
+
+
+##
+plot2_data <- strawberry |> 
+  select(c(Year, State, Category, Item, Value)) |> 
+  filter((Year == 2021) & 
+           (Category == "ORGANIC - SALES") & 
+           (Item == "MEASURED IN $") & 
+           (Value != "(D)"))
+
+
+plot2_data$Value <- as.numeric(gsub(",", "", plot2_data$Value))
+
+plot2_data <- plot1_data |> arrange(desc(Value))
+
+ggplot(plot2_data, aes(x=reorder(State, -Value), y=Value)) + 
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(x = "States", y = "Sales",
+title ="Organic Strawberry Sales ($) in 2021")
+
+
+```
+
+## EDA
+
+Once the data has been cleaned and organized, you must conduct your own EDA.  Be sure to include a discussion of your analysis of the chemical information, including citations for data and other information you have used.  Visualizations should play a key role in your analysis.  Plots should be labeled and captioned.
+
+<!-- ## chemicals -->
+
+<!-- ### carcinogens from WHO list -->
+
+
+<!-- #### updated -->
+
+<!-- [list from WHO?](https://ggle.io/6Eys) -->
+
+<!-- Arsenic: A Group 1 carcinogen, or conclusive cause of cancer   -->
+<!-- Ethylene oxide: A Group 1 carcinogen   -->
+<!-- Lindane: A Group 1 carcinogen   -->
+<!-- 2,3,7,8-tetrachlorodibenzo-p-dioxin (TCDD): A Group 1 carcinogen   -->
+<!-- Diazinon: Classified as "probably carcinogenic"   -->
+<!-- Glyphosate: Classified as "probably carcinogenic"    -->
+<!-- Malathion: Classified as "probably carcinogenic"   -->
+
+
+
+
+<!-- #### -->
+
+<!-- Now produce two data frames using strwb_survey. -->
+<!-- One will have market data similar to strwb_census -->
+<!-- The second will have data about chemicals used by  -->
+<!-- strawberry growers. -->
+
+<!-- Use the survey market data to enrich the data you already have -->
+<!-- from the census.   -->
+
+<!-- Use the chemical data to explore the use of carcinogens to grown strawberries.  Use the World Health Organization's -->
+<!-- list of carcinogens.  These lists site specific chemicals.  -->
+<!-- For exampe: these chemicals are on WHO's list of known carcinogens: captafol, ethylene dibromide, glyphosate, malathion, diazinon and dichlorophenyltrichloroethane (DDT).   Note that the WHO lists are not specific to strawberries.  You must use available data resources to determine which are used in strawberry growing. -->
+
+<!-- ## Clean and organize strwb_survey -->
+
+```{r}
+#| label: strwb_survey preliminary exploration
+#| echo: false
+#| eval: true
+
+# glimpse(strwb_survey)
+
+## find strwb_survey columns that should be split into columns
+## 
+
+## this section will produce tables listing
+## the variables in the columns of strwb_survey
+## remove the table your won't use
+
+# distinct(strwb_survey[,3]) |> kable()
+# c4 <- distinct(strwb_survey[,4])
+# 
+# c6 <- distinct(strwb_survey[,6])
+# c7 <- distinct(strwb_survey[,7])
+# c8 <- distinct(strwb_survey[,8])
+
+# c3 |> kable()
+# c4 |> kable()
+# 
+# c6 |> kable()
+# c7 |> kable()
+# c8 |> kable()
+
+
+```
+
+
+<!-- ## Column analyses -->
+
+<!-- ### Period -->
+
+```{r}
+#| label: period column 
+#| echo: false
+
+per_c <- strwb_survey |> select(Period) |> distinct()
+per_c <- unlist(per_c)
+
+
+## the Period column denotes
+## three periods for data collection
+##    marketing year
+##    year
+##    year - Aug Forecast
+##
+
+
+
+```
+
+<!-- data item -->
+
+```{r}
+#| label: data item analysis
+#| echo: false
+
+
+## columns need descriptive names
+
+strwb_survey <- strwb_survey |> 
+  separate_wider_delim(  cols = `Data Item`,
+                         delim = ",",
+                         names = c("temp1",
+                                 "temp2",
+                                 "temp3",
+                                 "temp4"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+
+strwb_survey <- strwb_survey |>
+  separate_wider_delim(  cols = temp1,
+                         delim = " - ",
+                         names = c("temp1a",
+                                 "temp1b"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+
+
+# a <- strwb_survey |> distinct(temp1a)
+## temp1a contains only 1 value -- STRAWBERRIES
+
+a <- strwb_survey |> distinct(temp1a)
+
+## It appears that strwb_survey intermingles
+## market data rows and chemical data rows, with
+## the indicators for the differet category of rows
+## being in the "Domain" column.
+## 
+
+## let's examing the domain column -- begining lby
+## separting with 
+## splitting Domain into columns
+
+
+
+
+```
+
+
+<!-- Domain -->
+
+
+```{r}
+#| label: domain
+#| echo: false
+#| eval: true
+
+
+
+strwb_survey <- strwb_survey |>
+  separate_wider_delim(  cols = Domain,
+                         delim = ",",
+                         names = c("temp22",
+                                 "temp23"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+
+
+t22 <- unique(strwb_survey$temp22)
+
+t23 <- unique(strwb_survey$temp23)
+
+## Now separate the first column of the Domain Category.
+## This iss allow the Chemical rows to be identified
+## easity
+
+
+
+```
+
+<!-- Domain Category -->
+
+```{r}
+#| label: Domain Category
+#| echo: false
+#| eval: true
+
+
+strwb_survey <- strwb_survey |>
+  separate_wider_delim(  cols = `Domain Category`,
+                         delim = ",",
+                         names = c("temp42",
+                                 "temp43",
+                                 "temp44",
+                                 "temp45"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+
+
+## temp22 or temp42 or both == CHEMICAL 
+##  else the row contains market data
+
+
+
+strwb_survey_chem <- strwb_survey |> filter((temp22 == "CHEMICAL") | (temp42 == "CHEMICAL"))
+
+strwb_survey_mkt <- strwb_survey |> filter(!((temp22 == "CHEMICAL") | (temp42 == "CHEMICAL")))
+
+
+```
+
+<!-- drop 1-value columns strawberry chems  -->
+
+```{r}
+#| label: 1-value cols
+#| echo: false
+#| eval: true
+
+chem1 <-  drop_one_value_col(strwb_survey_chem)
+
+# chem1 |> kable(caption = "1-value columns dropped")
+
+chem1 <- setdiff(colnames(strwb_survey_chem), chem1$col_name)
+
+strwb_survey_chem <- strwb_survey_chem |> select(all_of(chem1))
+
+```
+
+
+<!-- mkt -->
+
+
+```{r}
+#| label: mkt 
+#| echo: false
+#| eval: true
+
+mkt1 <- drop_one_value_col(strwb_survey_mkt)
+
+# mkt1 |> kable(caption = "droping 1-value cols - mkt")
+
+mkt1 <- setdiff(colnames(strwb_survey_mkt), mkt1$col_name)
+
+strwb_survey_mkt <- strwb_survey_mkt |> select(all_of(mkt1))
+
+
+```
+
+<p style="page-break-before: always"></p>
+
+### These references have been left in the document to help while you are writing.  Cite those you use and drop the rest from the final document.
+
+
+
+[NASS help](https://quickstats.nass.usda.gov/tutorials)
+
+[Quick Stats Glossary](https://quickstats.nass.usda.gov/src/glossary.pdf)
+
+
+[Quick Stats Column Definitions](https://quickstats.nass.usda.gov/param_define)
+
+
+
+[stats by subject](https://www.nass.usda.gov/Statistics_by_Subject/index.php?sector=CROPS)
+
+
+
+for EPA number lookup [epa numbers](https://archive.epa.gov/pesticides/chemicalsearch/chemical/foia/web/html/128810.html)
+
+[Active Pesticide Product Registration Informational Listing](https://ordspub.epa.gov/ords/pesticides/f?p=APPRIL_PUBLIC:2::::::)
+
+
+pc number input
+[pesticide chemical search](https://ordspub.epa.gov/ords/pesticides/f?p=chemicalsearch:1)
+
+[toxic chemical dashboard](https://comptox.epa.gov/dashboard/)
+
+[ACToR – Aggregated Computational Toxicology Resource](https://cfpub.epa.gov/si/si_public_record_report.cfm?Lab=NCCT&dirEntryId=209598)
+
+[comptox dashboard](https://comptox.epa.gov/dashboard/chemical/details/DTXSID0020315)
+
+[pubChem](https://pubchem.ncbi.nlm.nih.gov/)
+
+The EPA PC (Pesticide Chemical) Code is a unique chemical code number assigned by the EPA to a particular pesticide active ingredient, inert ingredient or mixture of active ingredients.
+
+## Investigating toxic pesticides
+
+[start here with chem PC code](https://ordspub.epa.gov/ords/pesticides/f?p=chemicalsearch:1)
+
+[step 2](https://ordspub.epa.gov/ords/pesticides/f?p=113:1::::RP,17,1::) to get label (with warnings) for products using the chemical
+
+[International Chemical safety cards](https://www.ilo.org/dyn/icsc/showcard.home)
+
+
+
+
+[Pesticide Product and Label System](https://ordspub.epa.gov/ords/pesticides/f?p=113:1::::RP,17,1::)
+
+[Search by Chemical](https://ordspub.epa.gov/ords/pesticides/f?p=113:17::::::)
+
+[CompTox Chemicals Dashboard](https://comptox.epa.gov/dashboard/)
+
+[Active Pesticide Product Registration Informational Listing](https://ordspub.epa.gov/ords/pesticides/f?p=APPRIL_PUBLIC:2::::::)
+
+[OSHA chemical database](https://www.osha.gov/chemicaldata)
+
+[Pesticide Ingredients](http://npic.orst.edu/ingred/)
+
+[NPIC Product Research Online (NPRO)](http://npic.orst.edu/NPRO/)
+
+[Databases for Chemical Information](http://npic.orst.edu/ingred/cheminfo.html)
+
+[Pesticide Active Ingredients](http://npic.orst.edu/ingred/active.html)
+
+[TSCA Chemical Substance Inventory](https://www.epa.gov/tsca-inventory)
+
+[glyphosate](https://ordspub.epa.gov/ords/pesticides/f?p=CHEMICALSEARCH:3::::1,3,31,7,12,25:P3_XCHEMICAL_ID:2478)
+
