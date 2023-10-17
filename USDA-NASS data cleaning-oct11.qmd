@@ -1,6 +1,7 @@
 ---
 title: "Stawberries: exploratory data analysis"
 author: MA615
+name: Fengyuan Shen
 date: 2023 Oct 11
 format: html
 engine: knitr
@@ -85,7 +86,7 @@ library(stringr)
 
 strawberry <- read_csv("strawberry.csv", col_names = TRUE)
 
-# glimpse(strawberry)
+glimpse(strawberry)
 ```
 
 <!-- Remove columns with a single value in all columns -->
@@ -137,7 +138,7 @@ strawberry <- strawberry |> select(!all_of(str))
 #| label: glimpse of strawberry data
 #| echo: false
 
-## glimpse(strawberry)
+glimpse(strawberry)
 
 ```
 
@@ -159,7 +160,7 @@ state_all <- strawberry |> group_by(State) |> count()
 ## counts and testing for equality with the total rows in the 
 ## data frame
 
-# if(sum(state_all$n) == dim(strawberry)[1]){print("Every row has value in the State column.")}
+if(sum(state_all$n) == dim(strawberry)[1]){print("Every row has value in the State column.")}
 
 ```
 
@@ -224,7 +225,7 @@ strwb_survey <- strawberry |> filter(Program == "SURVEY")
 
 ## check that all of the rows are accounted for
 
-## nrow(strawberry) == (nrow(strwb_census) + nrow(strwb_survey))
+nrow(strawberry) == (nrow(strwb_census) + nrow(strwb_survey))
 
 ## Move marketing-related rows in strw_b_chem 
 ## to strw_b_sales
@@ -630,19 +631,19 @@ v_trns <- dcomma(v)
 #| echo: false
 #| eval: false
 
-plot1_data <- strawberry |> 
-  select(c(Year, State, Category, Value)) |> 
-  filter((Year == 2021) & (Category == "ORGANIC - OPERATIONS WITH SALES"))
-
-plot1_data$Value <- as.numeric(plot1_data$Value)
-
-plot1_data <- plot1_data |> arrange(desc(Value))
-
-ggplot(plot1_data, aes(x=reorder(State, -Value), y=Value)) + 
-  geom_bar(stat = "identity") + 
-  theme(axis.text.x=element_text(angle=45,hjust=1)) +
-  labs(x = "States", y = "Count",
-title ="Number of Organic Strawberry operations with Sales in 2021")
+# plot1_data <- strawberry |> 
+#   select(c(Year, State, Category, Value)) |> 
+#   filter((Year == 2021) & (Category == "ORGANIC - OPERATIONS WITH SALES"))
+# 
+# plot1_data$Value <- as.numeric(plot1_data$Value)
+# 
+# plot1_data <- plot1_data |> arrange(desc(Value))
+# 
+# ggplot(plot1_data, aes(x=reorder(State, -Value), y=Value)) + 
+#   geom_bar(stat = "identity") + 
+#   theme(axis.text.x=element_text(angle=45,hjust=1)) +
+#   labs(x = "States", y = "Count",
+# title ="Number of Organic Strawberry operations with Sales in 2021")
 
 
 ```
@@ -654,23 +655,23 @@ title ="Number of Organic Strawberry operations with Sales in 2021")
 
 
 ##
-plot2_data <- strawberry |> 
-  select(c(Year, State, Category, Item, Value)) |> 
-  filter((Year == 2021) & 
-           (Category == "ORGANIC - SALES") & 
-           (Item == "MEASURED IN $") & 
-           (Value != "(D)"))
-
-
-plot2_data$Value <- as.numeric(gsub(",", "", plot2_data$Value))
-
-plot2_data <- plot1_data |> arrange(desc(Value))
-
-ggplot(plot2_data, aes(x=reorder(State, -Value), y=Value)) + 
-  geom_bar(stat = "identity") + 
-  theme(axis.text.x=element_text(angle=45,hjust=1)) +
-  labs(x = "States", y = "Sales",
-title ="Organic Strawberry Sales ($) in 2021")
+# plot2_data <- strawberry |> 
+#   select(c(Year, State, Category, Item, Value)) |> 
+#   filter((Year == 2021) & 
+#            (Category == "ORGANIC - SALES") & 
+#            (Item == "MEASURED IN $") & 
+#            (Value != "(D)"))
+# 
+# 
+# plot2_data$Value <- as.numeric(gsub(",", "", plot2_data$Value))
+# 
+# plot2_data <- plot1_data |> arrange(desc(Value))
+# 
+# ggplot(plot2_data, aes(x=reorder(State, -Value), y=Value)) + 
+#   geom_bar(stat = "identity") + 
+#   theme(axis.text.x=element_text(angle=45,hjust=1)) +
+#   labs(x = "States", y = "Sales",
+# title ="Organic Strawberry Sales ($) in 2021")
 
 
 ```
