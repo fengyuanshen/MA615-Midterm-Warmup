@@ -641,67 +641,6 @@ v_trns <- dcomma(v)
 
 ```
 
-<<<<<<< HEAD
-=======
-<!-- NOTE -->
-
-<!-- These plots were in early versions of the classroom notes. -->
-
-<!-- In final versions of this document, they should be included in the EDA section. Note that the code will not run without editing. -->
-
-<!-- ## plots   -->
-
-```{r}
-#| label: plot 1
-#| echo: false
-#| eval: false
-
-# plot1_data <- strawberry |> 
-#   select(c(Year, State, Category, Value)) |> 
-#   filter((Year == 2021) & (Category == "ORGANIC - OPERATIONS WITH SALES"))
-# 
-# plot1_data$Value <- as.numeric(plot1_data$Value)
-# 
-# plot1_data <- plot1_data |> arrange(desc(Value))
-# 
-# ggplot(plot1_data, aes(x=reorder(State, -Value), y=Value)) + 
-#   geom_bar(stat = "identity") + 
-#   theme(axis.text.x=element_text(angle=45,hjust=1)) +
-#   labs(x = "States", y = "Count",
-# title ="Number of Organic Strawberry operations with Sales in 2021")
-
-
-```
-
-```{r}
-#| label: plot 2
-#| echo: false
-#| eval: false
-
-
-##
-# plot2_data <- strawberry |> 
-#   select(c(Year, State, Category, Item, Value)) |> 
-#   filter((Year == 2021) & 
-#            (Category == "ORGANIC - SALES") & 
-#            (Item == "MEASURED IN $") & 
-#            (Value != "(D)"))
-# 
-# 
-# plot2_data$Value <- as.numeric(gsub(",", "", plot2_data$Value))
-# 
-# plot2_data <- plot1_data |> arrange(desc(Value))
-# 
-# ggplot(plot2_data, aes(x=reorder(State, -Value), y=Value)) + 
-#   geom_bar(stat = "identity") + 
-#   theme(axis.text.x=element_text(angle=45,hjust=1)) +
-#   labs(x = "States", y = "Sales",
-# title ="Organic Strawberry Sales ($) in 2021")
-
-
-```
-
->>>>>>> fed2596f8b0c6d2b27f94e6df16c99a231a27f6e
 ## EDA
 
 <!-- ## chemicals -->
