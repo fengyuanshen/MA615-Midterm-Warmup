@@ -157,12 +157,8 @@ strawberry <- strawberry |> select(!all_of(str))
 #| label: glimpse of strawberry data
 #| echo: false
 
-<<<<<<< HEAD
 # glimpse(strawberry)
-=======
-glimpse(strawberry)
 
->>>>>>> fed2596f8b0c6d2b27f94e6df16c99a231a27f6e
 ```
 
 <!-- ## Examine the data. How is it organized? -->
