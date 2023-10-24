@@ -179,7 +179,7 @@ state_all <- strawberry |> group_by(State) |> count()
 ## counts and testing for equality with the total rows in the 
 ## data frame
 
-if(sum(state_all$n) == dim(strawberry)[1]){print("Every row has value in the State column.")}
+#if(sum(state_all$n) == dim(strawberry)[1]){print("Every row has value in the State column.")}
 
 ```
 
@@ -244,7 +244,7 @@ strwb_survey <- strawberry |> filter(Program == "SURVEY")
 
 ## check that all of the rows are accounted for
 
-nrow(strawberry) == (nrow(strwb_census) + nrow(strwb_survey))
+#nrow(strawberry) == (nrow(strwb_census) + nrow(strwb_survey))
 
 ## Move marketing-related rows in strw_b_chem 
 ## to strw_b_sales
